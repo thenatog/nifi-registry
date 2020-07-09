@@ -22,6 +22,8 @@ import com.nimbusds.oauth2.sdk.AuthorizationGrant;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.nifi.registry.web.security.authentication.util.CacheKey;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -35,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * OidcService is a service for managing the OpenId Connect Authorization flow.
  */
+@Service
 public class OidcService {
 
     private OidcIdentityProvider identityProvider;
@@ -46,6 +49,7 @@ public class OidcService {
      *
      * @param identityProvider          The identity provider
      */
+    @Autowired
     public OidcService(final OidcIdentityProvider identityProvider) {
         this(identityProvider, 60, TimeUnit.SECONDS);
     }
@@ -64,6 +68,7 @@ public class OidcService {
             throw new RuntimeException("The OidcIdentityProvider must be specified.");
         }
 
+        identityProvider.initializeProvider();
         this.identityProvider = identityProvider;
         this.stateLookupForPendingRequests = CacheBuilder.newBuilder().expireAfterWrite(duration, units).build();
         this.jwtLookupForCompletedRequests = CacheBuilder.newBuilder().expireAfterWrite(duration, units).build();
