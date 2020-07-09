@@ -107,6 +107,7 @@ public class AccessResource extends ApplicationResource {
             NiFiRegistryProperties properties,
             JwtService jwtService,
             X509IdentityProvider x509IdentityProvider,
+            OidcService oidcService,
             @Nullable KerberosSpnegoIdentityProvider kerberosSpnegoIdentityProvider,
             @Nullable IdentityProvider identityProvider,
             ServiceFacade serviceFacade,
@@ -115,6 +116,7 @@ public class AccessResource extends ApplicationResource {
         this.properties = properties;
         this.jwtService = jwtService;
         this.x509IdentityProvider = x509IdentityProvider;
+        this.oidcService = oidcService;
         this.kerberosSpnegoIdentityProvider = kerberosSpnegoIdentityProvider;
         this.identityProvider = identityProvider;
     }
@@ -149,7 +151,6 @@ public class AccessResource extends ApplicationResource {
 
         return generateOkResponse(currentUser).build();
     }
-
 
     /**
      * Creates a token for accessing the REST API.
@@ -530,14 +531,14 @@ public class AccessResource extends ApplicationResource {
     public void oidcRequest(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
-            return;
+            //forwardToMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
+            throw new IllegalStateException("User authentication/authorization is only supported when running over HTTPS.");
         }
 
         // ensure oidc is enabled
         if (!oidcService.isOidcEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
-            return;
+            //forwardToMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
+            throw new IllegalStateException("OpenId Connect is not configured.");
         }
 
         final String oidcRequestIdentifier = UUID.randomUUID().toString();
@@ -577,20 +578,20 @@ public class AccessResource extends ApplicationResource {
     public void oidcCallback(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
-            return;
+            //forwardToMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
+            throw new IllegalStateException("User authentication/authorization is only supported when running over HTTPS.");
         }
 
         // ensure oidc is enabled
         if (!oidcService.isOidcEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
-            return;
+            //forwardToMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
+            throw new IllegalStateException("OpenId Connect is not configured.");
         }
 
         final String oidcRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), OIDC_REQUEST_IDENTIFIER);
         if (oidcRequestIdentifier == null) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "The login request identifier was not found in the request. Unable to continue.");
-            return;
+            //forwardToMessagePage(httpServletRequest, httpServletResponse, "The login request identifier was not found in the request. Unable to continue.");
+            throw new IllegalStateException("The login request identifier was not found in the request. Unable to continue.");
         }
 
         final com.nimbusds.openid.connect.sdk.AuthenticationResponse oidcResponse;
@@ -603,8 +604,7 @@ public class AccessResource extends ApplicationResource {
             removeOidcRequestCookie(httpServletResponse);
 
             // forward to the error page
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "Unable to parse the redirect URI from the OpenId Connect Provider. Unable to continue login process.");
-            return;
+            throw new IllegalStateException("Unable to parse the redirect URI from the OpenId Connect Provider. Unable to continue login process.");
         }
 
         if (oidcResponse.indicatesSuccess()) {
@@ -619,8 +619,7 @@ public class AccessResource extends ApplicationResource {
                 removeOidcRequestCookie(httpServletResponse);
 
                 // forward to the error page
-                forwardToMessagePage(httpServletRequest, httpServletResponse, "Purposed state does not match the stored state. Unable to continue login process.");
-                return;
+                throw new IllegalStateException("Purposed state does not match the stored state. Unable to continue login process.");
             }
 
             try {
@@ -635,8 +634,7 @@ public class AccessResource extends ApplicationResource {
                 removeOidcRequestCookie(httpServletResponse);
 
                 // forward to the error page
-                forwardToMessagePage(httpServletRequest, httpServletResponse, "Unable to exchange authorization for ID token: " + e.getMessage());
-                return;
+                throw new IllegalStateException("Unable to exchange authorization for ID token: " + e.getMessage());
             }
 
             // redirect to the name page
@@ -647,7 +645,7 @@ public class AccessResource extends ApplicationResource {
 
             // report the unsuccessful login
             final AuthenticationErrorResponse errorOidcResponse = (AuthenticationErrorResponse) oidcResponse;
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "Unsuccessful login attempt: " + errorOidcResponse.getErrorObject().getDescription());
+            throw new IllegalStateException("Unsuccessful login attempt: " + errorOidcResponse.getErrorObject().getDescription());
         }
     }
 
@@ -739,6 +737,10 @@ public class AccessResource extends ApplicationResource {
         return null;
     }
 
+    public void setOidcService(OidcService oidcService) {
+        this.oidcService = oidcService;
+    }
+
     private String getOidcCallback() {
         return generateResourceUri("access", "oidc", "callback");
     }
@@ -758,15 +760,15 @@ public class AccessResource extends ApplicationResource {
 
     private String getNiFiRegistryUri() {
         final String nifiRegistryApiUrl = generateResourceUri();
-        final String baseUrl = StringUtils.substringBeforeLast(nifiRegistryApiUrl, "/nifi-api");
-        return baseUrl + "/nifi";
+        final String baseUrl = StringUtils.substringBeforeLast(nifiRegistryApiUrl, "/nifi-registry-api");
+        return baseUrl + "/nifi-registry";
     }
 
     private void forwardToMessagePage(final HttpServletRequest httpServletRequest, final HttpServletResponse httpServletResponse, final String message) throws Exception {
         httpServletRequest.setAttribute("title", OIDC_ERROR_TITLE);
         httpServletRequest.setAttribute("messages", message);
 
-        final ServletContext uiContext = httpServletRequest.getServletContext().getContext("/nifi");
+        final ServletContext uiContext = httpServletRequest.getServletContext().getContext("/nifi-registry");
         uiContext.getRequestDispatcher("/WEB-INF/pages/message-page.jsp").forward(httpServletRequest, httpServletResponse);
     }
 

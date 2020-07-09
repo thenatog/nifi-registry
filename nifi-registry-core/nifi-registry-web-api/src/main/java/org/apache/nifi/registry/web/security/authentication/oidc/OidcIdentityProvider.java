@@ -28,6 +28,11 @@ public interface OidcIdentityProvider {
     String OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED = "OpenId Connect support is not configured";
 
     /**
+     * Initializes the provider.
+     */
+    void initializeProvider();
+
+    /**
      * Returns whether OIDC support is enabled.
      *
      * @return whether OIDC support is enabled

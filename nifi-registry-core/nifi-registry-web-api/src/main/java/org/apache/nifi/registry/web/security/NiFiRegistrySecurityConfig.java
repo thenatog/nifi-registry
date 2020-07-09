@@ -24,6 +24,7 @@ import org.apache.nifi.registry.web.security.authentication.AnonymousIdentityFil
 import org.apache.nifi.registry.web.security.authentication.IdentityAuthenticationProvider;
 import org.apache.nifi.registry.web.security.authentication.IdentityFilter;
 import org.apache.nifi.registry.web.security.authentication.jwt.JwtIdentityProvider;
+import org.apache.nifi.registry.web.security.authentication.oidc.OidcIdentityProvider;
 import org.apache.nifi.registry.web.security.authentication.x509.X509IdentityAuthenticationProvider;
 import org.apache.nifi.registry.web.security.authentication.x509.X509IdentityProvider;
 import org.apache.nifi.registry.web.security.authorization.ResourceAuthorizationFilter;
@@ -70,6 +71,10 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
     private AnonymousIdentityFilter anonymousAuthenticationFilter = new AnonymousIdentityFilter();
 
     @Autowired
+    private OidcIdentityProvider oidcIdentityProvider;
+
+
+    @Autowired
     private X509IdentityProvider x509IdentityProvider;
     private IdentityFilter x509AuthenticationFilter;
     private IdentityAuthenticationProvider x509AuthenticationProvider;
@@ -88,7 +93,8 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(WebSecurity webSecurity) throws Exception {
         // allow any client to access the endpoint for logging in to generate an access token
-        webSecurity.ignoring().antMatchers( "/access/token/**");
+        webSecurity.ignoring().antMatchers("/access", "/access/config", "/access/token", "/access/kerberos",
+                "/access/oidc/exchange", "/access/oidc/callback", "/access/oidc/request");
     }
 
     @Override
