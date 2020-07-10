@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -119,6 +120,14 @@ public class NiFiRegistryProperties extends Properties {
     public static final String DEFAULT_WEB_SHOULD_SEND_SERVER_VERSION = "true";
     public static final String DEFAULT_SECURITY_USER_OIDC_CONNECT_TIMEOUT = "5 secs";
     public static final String DEFAULT_SECURITY_USER_OIDC_READ_TIMEOUT = "5 secs";
+
+    public NiFiRegistryProperties() {
+        super();
+    }
+
+    public NiFiRegistryProperties(Map<String, String> props) {
+        this.putAll(props);
+    }
 
     public int getWebThreads() {
         int webThreads = 200;

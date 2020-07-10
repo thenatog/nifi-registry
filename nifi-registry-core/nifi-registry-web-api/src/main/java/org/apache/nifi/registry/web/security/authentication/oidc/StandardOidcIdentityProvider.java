@@ -16,6 +16,25 @@
  */
 package org.apache.nifi.registry.web.security.authentication.oidc;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.nifi.registry.properties.NiFiRegistryProperties;
+import org.apache.nifi.registry.security.authentication.exception.IdentityAccessException;
+import org.apache.nifi.registry.util.FormatUtils;
+import org.apache.nifi.registry.web.security.authentication.jwt.JwtService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.proc.BadJOSEException;
@@ -50,26 +69,6 @@ import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
 import net.minidev.json.JSONObject;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.registry.security.authentication.exception.IdentityAccessException;
-import org.apache.nifi.registry.util.FormatUtils;
-import org.apache.nifi.registry.properties.NiFiRegistryProperties;
-import org.apache.nifi.registry.web.security.authentication.jwt.JwtService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * OidcProvider for managing the OpenId Connect Authorization flow.
@@ -111,16 +110,16 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         if (!properties.isOidcEnabled()) {
             logger.warn("The OIDC provider is not configured or enabled");
             return;
-            }
+        }
 
         validateOIDCConfiguration();
 
-            try {
-                // retrieve the oidc provider metadata
-                oidcProviderMetadata = retrieveOidcProviderMetadata(properties.getOidcDiscoveryUrl());
-            } catch (IOException | ParseException e) {
-                throw new RuntimeException("Unable to retrieve OpenId Connect Provider metadata from: " + properties.getOidcDiscoveryUrl(), e);
-            }
+        try {
+            // retrieve the oidc provider metadata
+            oidcProviderMetadata = retrieveOidcProviderMetadata(properties.getOidcDiscoveryUrl());
+        } catch (IOException | ParseException e) {
+            throw new RuntimeException("Unable to retrieve OpenId Connect Provider metadata from: " + properties.getOidcDiscoveryUrl(), e);
+        }
 
         validateOIDCProviderMetadata();
     }
@@ -129,64 +128,64 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
      * Validates the retrieved OIDC provider metadata.
      */
     private void validateOIDCProviderMetadata() {
-            // ensure the authorization endpoint is present
-            if (oidcProviderMetadata.getAuthorizationEndpointURI() == null) {
-                throw new RuntimeException("OpenId Connect Provider metadata does not contain an Authorization Endpoint.");
-            }
-
-            // ensure the token endpoint is present
-            if (oidcProviderMetadata.getTokenEndpointURI() == null) {
-                throw new RuntimeException("OpenId Connect Provider metadata does not contain a Token Endpoint.");
-            }
-
-            // ensure the oidc provider supports basic or post client auth
-            List<ClientAuthenticationMethod> clientAuthenticationMethods = oidcProviderMetadata.getTokenEndpointAuthMethods();
-            logger.info("OpenId Connect: Available clientAuthenticationMethods {} ", clientAuthenticationMethods);
-            if (clientAuthenticationMethods == null || clientAuthenticationMethods.isEmpty()) {
-                clientAuthenticationMethods = new ArrayList<>();
-                clientAuthenticationMethods.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
-                oidcProviderMetadata.setTokenEndpointAuthMethods(clientAuthenticationMethods);
-                logger.warn("OpenId Connect: ClientAuthenticationMethods is null, Setting clientAuthenticationMethods as CLIENT_SECRET_BASIC");
-            } else if (!clientAuthenticationMethods.contains(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-                    && !clientAuthenticationMethods.contains(ClientAuthenticationMethod.CLIENT_SECRET_POST)) {
-                throw new RuntimeException(String.format("OpenId Connect Provider does not support %s or %s",
-                        ClientAuthenticationMethod.CLIENT_SECRET_BASIC.getValue(),
-                        ClientAuthenticationMethod.CLIENT_SECRET_POST.getValue()));
-            }
-
-            // extract the supported json web signature algorithms
-            final List<JWSAlgorithm> allowedAlgorithms = oidcProviderMetadata.getIDTokenJWSAlgs();
-            if (allowedAlgorithms == null || allowedAlgorithms.isEmpty()) {
-                throw new RuntimeException("The OpenId Connect Provider does not support any JWS algorithms.");
-            }
-
-            try {
-                // get the preferred json web signature algorithm
-                final String rawPreferredJwsAlgorithm = properties.getOidcPreferredJwsAlgorithm();
-
-                final JWSAlgorithm preferredJwsAlgorithm;
-                if (StringUtils.isBlank(rawPreferredJwsAlgorithm)) {
-                    preferredJwsAlgorithm = JWSAlgorithm.RS256;
-                } else {
-                    if ("none".equalsIgnoreCase(rawPreferredJwsAlgorithm)) {
-                        preferredJwsAlgorithm = null;
-                    } else {
-                        preferredJwsAlgorithm = JWSAlgorithm.parse(rawPreferredJwsAlgorithm);
-                    }
-                }
-
-                if (preferredJwsAlgorithm == null) {
-                    tokenValidator = new IDTokenValidator(oidcProviderMetadata.getIssuer(), clientId);
-                } else if (JWSAlgorithm.HS256.equals(preferredJwsAlgorithm) || JWSAlgorithm.HS384.equals(preferredJwsAlgorithm) || JWSAlgorithm.HS512.equals(preferredJwsAlgorithm)) {
-                    tokenValidator = new IDTokenValidator(oidcProviderMetadata.getIssuer(), clientId, preferredJwsAlgorithm, clientSecret);
-                } else {
-                    final ResourceRetriever retriever = new DefaultResourceRetriever(oidcConnectTimeout, oidcReadTimeout);
-                    tokenValidator = new IDTokenValidator(oidcProviderMetadata.getIssuer(), clientId, preferredJwsAlgorithm, oidcProviderMetadata.getJWKSetURI().toURL(), retriever);
-                }
-            } catch (final Exception e) {
-                throw new RuntimeException("Unable to create the ID token validator for the configured OpenId Connect Provider: " + e.getMessage(), e);
-            }
+        // ensure the authorization endpoint is present
+        if (oidcProviderMetadata.getAuthorizationEndpointURI() == null) {
+            throw new RuntimeException("OpenId Connect Provider metadata does not contain an Authorization Endpoint.");
         }
+
+        // ensure the token endpoint is present
+        if (oidcProviderMetadata.getTokenEndpointURI() == null) {
+            throw new RuntimeException("OpenId Connect Provider metadata does not contain a Token Endpoint.");
+        }
+
+        // ensure the oidc provider supports basic or post client auth
+        List<ClientAuthenticationMethod> clientAuthenticationMethods = oidcProviderMetadata.getTokenEndpointAuthMethods();
+        logger.info("OpenId Connect: Available clientAuthenticationMethods {} ", clientAuthenticationMethods);
+        if (clientAuthenticationMethods == null || clientAuthenticationMethods.isEmpty()) {
+            clientAuthenticationMethods = new ArrayList<>();
+            clientAuthenticationMethods.add(ClientAuthenticationMethod.CLIENT_SECRET_BASIC);
+            oidcProviderMetadata.setTokenEndpointAuthMethods(clientAuthenticationMethods);
+            logger.warn("OpenId Connect: ClientAuthenticationMethods is null, Setting clientAuthenticationMethods as CLIENT_SECRET_BASIC");
+        } else if (!clientAuthenticationMethods.contains(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                && !clientAuthenticationMethods.contains(ClientAuthenticationMethod.CLIENT_SECRET_POST)) {
+            throw new RuntimeException(String.format("OpenId Connect Provider does not support %s or %s",
+                    ClientAuthenticationMethod.CLIENT_SECRET_BASIC.getValue(),
+                    ClientAuthenticationMethod.CLIENT_SECRET_POST.getValue()));
+        }
+
+        // extract the supported json web signature algorithms
+        final List<JWSAlgorithm> allowedAlgorithms = oidcProviderMetadata.getIDTokenJWSAlgs();
+        if (allowedAlgorithms == null || allowedAlgorithms.isEmpty()) {
+            throw new RuntimeException("The OpenId Connect Provider does not support any JWS algorithms.");
+        }
+
+        try {
+            // get the preferred json web signature algorithm
+            final String rawPreferredJwsAlgorithm = properties.getOidcPreferredJwsAlgorithm();
+
+            final JWSAlgorithm preferredJwsAlgorithm;
+            if (StringUtils.isBlank(rawPreferredJwsAlgorithm)) {
+                preferredJwsAlgorithm = JWSAlgorithm.RS256;
+            } else {
+                if ("none".equalsIgnoreCase(rawPreferredJwsAlgorithm)) {
+                    preferredJwsAlgorithm = null;
+                } else {
+                    preferredJwsAlgorithm = JWSAlgorithm.parse(rawPreferredJwsAlgorithm);
+                }
+            }
+
+            if (preferredJwsAlgorithm == null) {
+                tokenValidator = new IDTokenValidator(oidcProviderMetadata.getIssuer(), clientId);
+            } else if (JWSAlgorithm.HS256.equals(preferredJwsAlgorithm) || JWSAlgorithm.HS384.equals(preferredJwsAlgorithm) || JWSAlgorithm.HS512.equals(preferredJwsAlgorithm)) {
+                tokenValidator = new IDTokenValidator(oidcProviderMetadata.getIssuer(), clientId, preferredJwsAlgorithm, clientSecret);
+            } else {
+                final ResourceRetriever retriever = new DefaultResourceRetriever(oidcConnectTimeout, oidcReadTimeout);
+                tokenValidator = new IDTokenValidator(oidcProviderMetadata.getIssuer(), clientId, preferredJwsAlgorithm, oidcProviderMetadata.getJWKSetURI().toURL(), retriever);
+            }
+        } catch (final Exception e) {
+            throw new RuntimeException("Unable to create the ID token validator for the configured OpenId Connect Provider: " + e.getMessage(), e);
+        }
+    }
 
     /**
      * Loads the initial configuration values relating to the OIDC provider from the class {@link NiFiRegistryProperties} and populates the individual fields.
@@ -220,7 +219,7 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         final String rawClientId = properties.getOidcClientId();
         if (StringUtils.isBlank(rawClientId)) {
             throw new RuntimeException("Client ID is required when configuring an OIDC Provider.");
-    }
+        }
         clientId = new ClientID(rawClientId);
 
         // client secret
@@ -324,10 +323,10 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
 
     private String authorizeClient(HTTPRequest tokenHttpRequest) throws ParseException, IOException, BadJOSEException, JOSEException, java.text.ParseException {
         // Get the token response
-            final TokenResponse response = OIDCTokenResponseParser.parse(tokenHttpRequest.send());
+        final TokenResponse response = OIDCTokenResponseParser.parse(tokenHttpRequest.send());
 
         // Handle success
-            if (response.indicatesSuccess()) {
+        if (response.indicatesSuccess()) {
             return convertOIDCTokenToNiFiToken((OIDCTokenResponse) response);
         } else {
             // If the response was not successful
@@ -378,17 +377,17 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
     }
 
     private String retrieveIdentityFromUserInfoEndpoint(OIDCTokens oidcTokens) throws IOException {
-                    // explicitly try to get the identity from the UserInfo endpoint with the configured claim
-                    // extract the bearer access token
-                    final BearerAccessToken bearerAccessToken = oidcTokens.getBearerAccessToken();
-                    if (bearerAccessToken == null) {
-                        throw new IllegalStateException("No access token found in the ID tokens");
-                    }
+        // explicitly try to get the identity from the UserInfo endpoint with the configured claim
+        // extract the bearer access token
+        final BearerAccessToken bearerAccessToken = oidcTokens.getBearerAccessToken();
+        if (bearerAccessToken == null) {
+            throw new IllegalStateException("No access token found in the ID tokens");
+        }
 
-                    // invoke the UserInfo endpoint
+        // invoke the UserInfo endpoint
         HTTPRequest userInfoRequest = createUserInfoRequest(bearerAccessToken);
         return lookupIdentityInUserInfo(userInfoRequest);
-                }
+    }
 
     private HTTPRequest createTokenHTTPRequest(AuthorizationGrant authorizationGrant, ClientAuthentication clientAuthentication) {
         final TokenRequest request = new TokenRequest(oidcProviderMetadata.getTokenEndpointURI(), clientAuthentication, authorizationGrant);
@@ -412,11 +411,11 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         List<ClientAuthenticationMethod> authMethods = oidcProviderMetadata.getTokenEndpointAuthMethods();
         if (authMethods != null && authMethods.contains(ClientAuthenticationMethod.CLIENT_SECRET_POST)) {
             clientAuthentication = new ClientSecretPost(clientId, clientSecret);
-            } else {
+        } else {
             clientAuthentication = new ClientSecretBasic(clientId, clientSecret);
-            }
-        return clientAuthentication;
         }
+        return clientAuthentication;
+    }
 
     private static List<String> getAvailableClaims(JWTClaimsSet claimSet) {
         // Get the claims available in the ID token response
