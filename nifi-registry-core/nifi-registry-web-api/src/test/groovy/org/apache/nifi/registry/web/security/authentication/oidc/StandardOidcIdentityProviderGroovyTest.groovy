@@ -21,7 +21,11 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.PlainJWT
 import com.nimbusds.oauth2.sdk.AuthorizationCode
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant
-import com.nimbusds.oauth2.sdk.auth.*
+import com.nimbusds.oauth2.sdk.auth.ClientAuthentication
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod
+import com.nimbusds.oauth2.sdk.auth.ClientSecretBasic
+import com.nimbusds.oauth2.sdk.auth.ClientSecretPost
+import com.nimbusds.oauth2.sdk.auth.Secret
 import com.nimbusds.oauth2.sdk.http.HTTPRequest
 import com.nimbusds.oauth2.sdk.http.HTTPResponse
 import com.nimbusds.oauth2.sdk.id.ClientID
@@ -59,16 +63,19 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
     private static final Logger logger = LoggerFactory.getLogger(StandardOidcIdentityProviderGroovyTest.class)
 
     private static final Key SIGNING_KEY = new Key(id: 1, identity: "signingKey", key: "mock-signing-key-value")
-    private static final Map<String, Object> DEFAULT_NIFI_PROPERTIES = [
-            isOidcEnabled                 : false,
-            getOidcDiscoveryUrl           : "https://localhost/oidc",
-            isLoginIdentityProviderEnabled: false,
-            isKnoxSsoEnabled              : false,
-            getOidcConnectTimeout         : 1000,
-            getOidcReadTimeout            : 1000,
-            getOidcClientId               : "expected_client_id",
-            getOidcClientSecret           : "expected_client_secret",
-            getOidcClaimIdentifyingUser   : "username"
+
+    /*
+    Unlike NiFiProperties, NiFiRegistryProperties extends java.util.Properties, which ultimately implements java.util.Map<>, so map coercion cannot be used here. Setting the raw properties does allow for the same outcomes.
+     */
+    private static final Map<String, String> DEFAULT_NIFI_PROPERTIES = [
+            (NiFiRegistryProperties.SECURITY_USER_OIDC_DISCOVERY_URL)         : "https://localhost/oidc",
+            (NiFiRegistryProperties.SECURITY_IDENTITY_PROVIDER)               : "", // Makes isLoginIdentityProviderEnabled => false
+            (NiFiRegistryProperties.SECURITY_USER_KNOX_URL)                   : "", // Makes isKnoxSsoEnabled => false
+            (NiFiRegistryProperties.SECURITY_USER_OIDC_CONNECT_TIMEOUT)       : "1000",
+            (NiFiRegistryProperties.SECURITY_USER_OIDC_READ_TIMEOUT)          : "1000",
+            (NiFiRegistryProperties.SECURITY_USER_OIDC_CLIENT_ID)             : "expected_client_id",
+            (NiFiRegistryProperties.SECURITY_USER_OIDC_CLIENT_SECRET)         : "expected_client_secret",
+            (NiFiRegistryProperties.SECURITY_USER_OIDC_CLAIM_IDENTIFYING_USER): "username"
     ]
 
     // Mock collaborators
@@ -91,12 +98,9 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
     void teardown() throws Exception {
     }
 
-    private static NiFiRegistryProperties buildNiFiRegistryProperties(Map<String, Object> props = [:]) {
-        def combinedProps = DEFAULT_NIFI_PROPERTIES + props
-        def mockNFP = combinedProps.collectEntries { String k, def v ->
-            [k, { -> return v }]
-        }
-        mockNFP as NiFiRegistryProperties
+    private static NiFiRegistryProperties buildNiFiRegistryProperties(Map<String, String> props = [:]) {
+        Map<String, String> combinedProps = DEFAULT_NIFI_PROPERTIES + props
+        new NiFiRegistryProperties(combinedProps)
     }
 
     private static JwtService buildJwtService() {
@@ -374,7 +378,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         logger.info("Payload: ${payload}")
 
         assert payload.username == "person@nifi.apache.org"
-        assert payload.keyId == 1
+        assert payload.keyId == "1"
         assert payload.exp <= System.currentTimeMillis() + 10_000
     }
 
@@ -409,7 +413,7 @@ class StandardOidcIdentityProviderGroovyTest extends GroovyTestCase {
         logger.info("Payload: ${payload}")
 
         assert payload.username == "person@nifi.apache.org"
-        assert payload.keyId == 1
+        assert payload.keyId == "1"
         assert payload.exp <= System.currentTimeMillis() + 10_000
     }
 
