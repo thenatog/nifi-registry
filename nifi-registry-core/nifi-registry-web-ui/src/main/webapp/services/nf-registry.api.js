@@ -18,8 +18,8 @@
 import NfStorage from 'services/nf-storage.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FdsDialogService } from '@nifi-fds/core';
-import { of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { of, from } from 'rxjs';
+import { map, catchError, concatMap } from 'rxjs/operators';
 
 var MILLIS_PER_SECOND = 1000;
 var headers = new Headers({'Content-Type': 'application/json'});
@@ -27,7 +27,8 @@ var headers = new Headers({'Content-Type': 'application/json'});
 var config = {
     urls: {
         currentUser: '../nifi-registry-api/access',
-        kerberos: '../nifi-registry-api/access/token/kerberos'
+        kerberos: '../nifi-registry-api/access/token/kerberos',
+        oidc: '../nifi-registry-api/access/oidc/exchange'
     }
 };
 
@@ -754,8 +755,26 @@ NfRegistryApi.prototype = {
         );
     },
 
+    retrieveJwt: function (exchangeUrl) {
+        this.http.post(exchangeUrl, null, {responseType: 'text', withCredentials: 'true'}).pipe(
+            map(function (jwt) {
+                // get the payload and store the token with the appropriate expiration
+                var token = self.nfStorage.getJwtPayload(jwt);
+                if (token) {
+                    var expiration = parseInt(token['exp'], 10) * MILLIS_PER_SECOND;
+                    self.nfStorage.setItem('jwt', jwt, expiration);
+                }
+                return of(jwt);
+            }),
+            catchError(function (err) {
+                console.log('Error in retrieveJWT' + err)
+                return of('');
+            })
+        );
+    },
+
     /**
-     * Kerberos ticket exchange.
+     * Kerberos and OIDC ticket exchange.
      *
      * @returns {*}
      */
@@ -764,7 +783,24 @@ NfRegistryApi.prototype = {
         if (this.nfStorage.hasItem('jwt')) {
             return of(self.nfStorage.getItem('jwt'));
         }
-        return this.http.post(config.urls.kerberos, null, {responseType: 'text'}).pipe(
+
+        from([config.urls.kerberos, config.urls.oidc]).pipe(concatMap(url => this.retrieveJwt(url))).subscribe(
+            function (jwt) {
+                console.log('JWT was: ' + jwt);
+                return of(jwt);
+            },
+            function (err) {
+                console.log('Error!');
+                return of('');
+            },
+            function () {
+                console.log('Completed');
+            }
+        );
+    },
+
+    oidcTicketExchange: function () {
+        return this.http.post(config.urls.oidc, null, {responseType: 'text'}).pipe(
             map(function (jwt) {
                 // get the payload and store the token with the appropriate expiration
                 var token = self.nfStorage.getJwtPayload(jwt);
