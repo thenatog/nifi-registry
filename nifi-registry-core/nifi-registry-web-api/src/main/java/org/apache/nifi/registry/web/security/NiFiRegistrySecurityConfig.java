@@ -72,6 +72,8 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private OidcIdentityProvider oidcIdentityProvider;
+    private IdentityFilter oidcAuthenticationFilter;
+    private IdentityAuthenticationProvider oidcAuthenticationProvider;
 
 
     @Autowired
@@ -122,6 +124,9 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
         // jwt
         http.addFilterBefore(jwtAuthenticationFilter(), AnonymousAuthenticationFilter.class);
 
+        // oidc
+        http.addFilterBefore(oidcAuthenticationFilter(), AnonymousAuthenticationFilter.class);
+
         // otp
         // todo, if needed one-time password auth filter goes here
 
@@ -140,7 +145,8 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth
                 .authenticationProvider(x509AuthenticationProvider())
-                .authenticationProvider(jwtAuthenticationProvider());
+                .authenticationProvider(jwtAuthenticationProvider())
+                .authenticationProvider(oidcAuthenticationProvider());
     }
 
     private IdentityFilter x509AuthenticationFilter() throws Exception {
@@ -169,6 +175,20 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
             jwtAuthenticationProvider = new IdentityAuthenticationProvider(properties, authorizer, jwtIdentityProvider);
         }
         return jwtAuthenticationProvider;
+    }
+
+    private IdentityFilter oidcAuthenticationFilter() throws Exception {
+        if (oidcAuthenticationFilter == null) {
+            oidcAuthenticationFilter = new IdentityFilter(oidcIdentityProvider);
+        }
+        return oidcAuthenticationFilter;
+    }
+
+    private IdentityAuthenticationProvider oidcAuthenticationProvider() {
+        if (oidcIdentityProvider == null) {
+            oidcAuthenticationProvider = new IdentityAuthenticationProvider(properties, authorizer, oidcIdentityProvider);
+        }
+        return oidcAuthenticationProvider;
     }
 
     private ResourceAuthorizationFilter resourceAuthorizationFilter() {

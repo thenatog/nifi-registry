@@ -28,7 +28,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.registry.properties.NiFiRegistryProperties;
+import org.apache.nifi.registry.security.authentication.AuthenticationRequest;
+import org.apache.nifi.registry.security.authentication.AuthenticationResponse;
+import org.apache.nifi.registry.security.authentication.IdentityProviderConfigurationContext;
+import org.apache.nifi.registry.security.authentication.IdentityProviderUsage;
 import org.apache.nifi.registry.security.authentication.exception.IdentityAccessException;
+import org.apache.nifi.registry.security.authentication.exception.InvalidCredentialsException;
+import org.apache.nifi.registry.security.exception.SecurityProviderCreationException;
+import org.apache.nifi.registry.security.exception.SecurityProviderDestructionException;
 import org.apache.nifi.registry.util.FormatUtils;
 import org.apache.nifi.registry.web.security.authentication.jwt.JwtService;
 import org.slf4j.Logger;
@@ -69,6 +76,8 @@ import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
 import net.minidev.json.JSONObject;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * OidcProvider for managing the OpenId Connect Authorization flow.
@@ -461,5 +470,35 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
         } catch (final ParseException | java.text.ParseException e) {
             throw new IdentityAccessException("Unable to parse the response from the UserInfo token request: " + e.getMessage());
         }
+    }
+
+    @Override
+    public IdentityProviderUsage getUsageInstructions() {
+        return null;
+    }
+
+    @Override
+    public AuthenticationRequest extractCredentials(HttpServletRequest servletRequest) {
+        return new AuthenticationRequest("nathan", null, null);
+    }
+
+    @Override
+    public AuthenticationResponse authenticate(AuthenticationRequest authenticationRequest) throws InvalidCredentialsException, IdentityAccessException {
+        return new AuthenticationResponse("nathan", "nathan", 10000, "boss");
+    }
+
+    @Override
+    public boolean supports(Class<? extends AuthenticationRequest> authenticationRequestClazz) {
+        return false;
+    }
+
+    @Override
+    public void onConfigured(IdentityProviderConfigurationContext configurationContext) throws SecurityProviderCreationException {
+
+    }
+
+    @Override
+    public void preDestruction() throws SecurityProviderDestructionException {
+
     }
 }
