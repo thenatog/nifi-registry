@@ -30,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.registry.properties.NiFiRegistryProperties;
 import org.apache.nifi.registry.security.authentication.AuthenticationRequest;
 import org.apache.nifi.registry.security.authentication.AuthenticationResponse;
+import org.apache.nifi.registry.security.authentication.IdentityProvider;
 import org.apache.nifi.registry.security.authentication.IdentityProviderConfigurationContext;
 import org.apache.nifi.registry.security.authentication.IdentityProviderUsage;
 import org.apache.nifi.registry.security.authentication.exception.IdentityAccessException;
@@ -38,6 +39,7 @@ import org.apache.nifi.registry.security.exception.SecurityProviderCreationExcep
 import org.apache.nifi.registry.security.exception.SecurityProviderDestructionException;
 import org.apache.nifi.registry.util.FormatUtils;
 import org.apache.nifi.registry.web.security.authentication.jwt.JwtService;
+import org.apache.nifi.registry.web.security.authentication.x509.X509IdentityProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,7 +85,7 @@ import javax.servlet.http.HttpServletRequest;
  * OidcProvider for managing the OpenId Connect Authorization flow.
  */
 @Component
-public class StandardOidcIdentityProvider implements OidcIdentityProvider {
+public class StandardOidcIdentityProvider implements OidcIdentityProvider, IdentityProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(StandardOidcIdentityProvider.class);
     private final String EMAIL_CLAIM = "email";
@@ -474,17 +476,29 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
 
     @Override
     public IdentityProviderUsage getUsageInstructions() {
-        return null;
+        return usage;
     }
 
     @Override
     public AuthenticationRequest extractCredentials(HttpServletRequest servletRequest) {
-        return new AuthenticationRequest("nathan", null, null);
+        // only support OIDC login when running securely
+        if (!servletRequest.isSecure() || !isOidcEnabled()) {
+            return null;
+        }
+
+        return null;
+        //return new AuthenticationRequest(null, kerberosTicket, authenticationDetailsSource.buildDetails(request));
     }
 
     @Override
     public AuthenticationResponse authenticate(AuthenticationRequest authenticationRequest) throws InvalidCredentialsException, IdentityAccessException {
-        return new AuthenticationResponse("nathan", "nathan", 10000, "boss");
+        if (authenticationRequest == null || authenticationRequest.getUsername() == null) {
+            return null;
+        }
+
+        String principal = authenticationRequest.getUsername();
+
+        return new AuthenticationResponse(principal, principal, 10000, "oidc-prov");
     }
 
     @Override
@@ -494,11 +508,24 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider {
 
     @Override
     public void onConfigured(IdentityProviderConfigurationContext configurationContext) throws SecurityProviderCreationException {
-
+        throw new SecurityProviderCreationException(StandardOidcIdentityProvider.class.getSimpleName() +
+                " does not currently support being loaded via IdentityProviderFactory");
     }
 
     @Override
     public void preDestruction() throws SecurityProviderDestructionException {
 
     }
+
+    private static final IdentityProviderUsage usage = new IdentityProviderUsage() {
+        @Override
+        public String getText() {
+            return "Configure an OIDC provider such as Google Suite.";
+        }
+
+        @Override
+        public AuthType getAuthType() {
+            return AuthType.OAUTH;
+        }
+    };
 }

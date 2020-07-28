@@ -75,7 +75,6 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
     private IdentityFilter oidcAuthenticationFilter;
     private IdentityAuthenticationProvider oidcAuthenticationProvider;
 
-
     @Autowired
     private X509IdentityProvider x509IdentityProvider;
     private IdentityFilter x509AuthenticationFilter;
@@ -95,8 +94,8 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(WebSecurity webSecurity) throws Exception {
         // allow any client to access the endpoint for logging in to generate an access token
-        webSecurity.ignoring().antMatchers("/access", "/access/config", "/access/token", "/access/kerberos",
-                "/access/oidc/exchange", "/access/oidc/callback", "/access/oidc/request");
+        webSecurity.ignoring().antMatchers("/access/config", "/access/token", "/access/kerberos",
+                "/access/oidc/exchange", "/access/oidc/callback", "/access/oidc/request", "/access/token/identity-provider");
     }
 
     @Override
@@ -143,10 +142,11 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        // does the order matter here?
         auth
+                .authenticationProvider(oidcAuthenticationProvider())
                 .authenticationProvider(x509AuthenticationProvider())
-                .authenticationProvider(jwtAuthenticationProvider())
-                .authenticationProvider(oidcAuthenticationProvider());
+                .authenticationProvider(jwtAuthenticationProvider());
     }
 
     private IdentityFilter x509AuthenticationFilter() throws Exception {
@@ -185,7 +185,7 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     private IdentityAuthenticationProvider oidcAuthenticationProvider() {
-        if (oidcIdentityProvider == null) {
+        if (oidcAuthenticationProvider == null) {
             oidcAuthenticationProvider = new IdentityAuthenticationProvider(properties, authorizer, oidcIdentityProvider);
         }
         return oidcAuthenticationProvider;

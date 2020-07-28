@@ -64,7 +64,7 @@ NfRegistryUsersAdministrationAuthGuard.prototype = {
             this.nfRegistryService.redirectUrl = url;
 
             // attempt kerberos authentication
-            this.nfRegistryApi.ticketExchange().subscribe(function (jwt) {
+            this.nfRegistryApi.oidcTicketExchange().subscribe(function (jwt) {
                 self.nfRegistryApi.loadCurrentUser().subscribe(function (currentUser) {
                     // there is no anonymous access and we don't know this user - open the login page which handles login/registration/etc
                     if (currentUser.error) {
@@ -187,7 +187,7 @@ NfRegistryWorkflowsAdministrationAuthGuard.prototype = {
             this.nfRegistryService.redirectUrl = url;
 
             // attempt kerberos authentication
-            this.nfRegistryApi.ticketExchange().subscribe(function (jwt) {
+            this.nfRegistryApi.oidcTicketExchange().subscribe(function (jwt) {
                 self.nfRegistryApi.loadCurrentUser().subscribe(function (currentUser) {
                     // there is no anonymous access and we don't know this user - open the login page which handles login/registration/etc
                     if (currentUser.error) {
@@ -297,7 +297,7 @@ NfRegistryLoginAuthGuard.prototype = {
                 return;
             }
             // attempt kerberos authentication
-            this.nfRegistryApi.ticketExchange().subscribe(function (jwt) {
+            this.nfRegistryApi.oidcTicketExchange().subscribe(function (jwt) {
                 self.nfRegistryApi.loadCurrentUser().subscribe(function (currentUser) {
                     self.nfRegistryService.currentUser = currentUser;
                     if (currentUser.anonymous === false) {
@@ -368,7 +368,7 @@ NfRegistryResourcesAuthGuard.prototype = {
             this.nfRegistryService.redirectUrl = url;
 
             // attempt kerberos authentication
-            this.nfRegistryApi.ticketExchange().subscribe(function (jwt) {
+            this.nfRegistryApi.oidcTicketExchange().subscribe(function (jwt) {
                 self.nfRegistryApi.loadCurrentUser().subscribe(function (currentUser) {
                     // there is no anonymous access and we don't know this user - open the login page which handles login/registration/etc
                     if (currentUser.error) {

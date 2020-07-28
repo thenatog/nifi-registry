@@ -104,6 +104,58 @@ describe('NfRegistry API w/ Angular testing utils', function () {
         httpMock.verify();
     }));
 
+    // --------- Nathan
+
+    it('retrieveJWT should POST a cookie to a given URL to retrieve a JWT.', inject([HttpTestingController], function (httpMock) {
+        // Spy
+        spyOn(nfRegistryApi.nfStorage, 'setItem').and.callThrough();
+        console.log('Nathan1');
+        // api call
+        nfRegistryApi.retrieveJwt('../nifi-registry-api/access/oidc/exchange').subscribe(function (response) {
+            var setItemCall = nfRegistryApi.nfStorage.setItem.calls.first();
+            expect(setItemCall.args[1]).toBe('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiYmVuZGVATklGSS5BUEFDSEUuT1JHIiwiaXNzIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwiYXVkIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYmJlbmRlQE5JRkkuQVBBQ0hFLk9SRyIsImtpZCI6IjQ3NWQwZWEyLTkzZGItNDhiNi05MjcxLTgyOGM3MzQ5ZTFkNiIsImlhdCI6MTUxMjQ4NTY4NywiZXhwIjoxNTEyNTI4ODg3fQ.lkaWPQw1ld7Qqb6-Zu8mAqu6r8mUVHBNP0ZfNpES3rA');
+            expect(response).toBe('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiYmVuZGVATklGSS5BUEFDSEUuT1JHIiwiaXNzIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwiYXVkIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYmJlbmRlQE5JRkkuQVBBQ0hFLk9SRyIsImtpZCI6IjQ3NWQwZWEyLTkzZGItNDhiNi05MjcxLTgyOGM3MzQ5ZTFkNiIsImlhdCI6MTUxMjQ4NTY4NywiZXhwIjoxNTEyNTI4ODg3fQ.lkaWPQw1ld7Qqb6-Zu8mAqu6r8mUVHBNP0ZfNpES3rA');
+        });
+        console.log('Nathan2');
+        // the request it made
+        req = httpMock.expectOne('../nifi-registry-api/access/oidc/exchange');
+        expect(req.request.method).toEqual('POST');
+        console.log('Nathan3');
+        // Next, fulfill the request by transmitting a response.
+        req.flush('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiYmVuZGVATklGSS5BUEFDSEUuT1JHIiwiaXNzIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwiYXVkIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYmJlbmRlQE5JRkkuQVBBQ0hFLk9SRyIsImtpZCI6IjQ3NWQwZWEyLTkzZGItNDhiNi05MjcxLTgyOGM3MzQ5ZTFkNiIsImlhdCI6MTUxMjQ4NTY4NywiZXhwIjoxNTEyNTI4ODg3fQ.lkaWPQw1ld7Qqb6-Zu8mAqu6r8mUVHBNP0ZfNpES3rA');
+        console.log('Nathan4');
+        // Finally, assert that there are no outstanding requests.
+        httpMock.verify();
+        console.log('Nathan5');
+    }));
+
+    it('nathan should POST to retrieve a JWT.', inject([HttpTestingController], function (httpMock) {
+        // Spy
+        spyOn(nfRegistryApi.nfStorage, 'setItem').and.callThrough();
+
+        console.log('Nathan1');
+        // api call
+        nfRegistryApi.oidcTicketExchange('../nifi-registry-api/access/oidc/exchange').subscribe(function (response) {
+            var setItemCall = nfRegistryApi.nfStorage.setItem.calls.first();
+            expect(setItemCall.args[1]).toBe('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiYmVuZGVATklGSS5BUEFDSEUuT1JHIiwiaXNzIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwiYXVkIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYmJlbmRlQE5JRkkuQVBBQ0hFLk9SRyIsImtpZCI6IjQ3NWQwZWEyLTkzZGItNDhiNi05MjcxLTgyOGM3MzQ5ZTFkNiIsImlhdCI6MTUxMjQ4NTY4NywiZXhwIjoxNTEyNTI4ODg3fQ.lkaWPQw1ld7Qqb6-Zu8mAqu6r8mUVHBNP0ZfNpES3rA');
+            expect(response).toBe('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiYmVuZGVATklGSS5BUEFDSEUuT1JHIiwiaXNzIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwiYXVkIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYmJlbmRlQE5JRkkuQVBBQ0hFLk9SRyIsImtpZCI6IjQ3NWQwZWEyLTkzZGItNDhiNi05MjcxLTgyOGM3MzQ5ZTFkNiIsImlhdCI6MTUxMjQ4NTY4NywiZXhwIjoxNTEyNTI4ODg3fQ.lkaWPQw1ld7Qqb6-Zu8mAqu6r8mUVHBNP0ZfNpES3rA');
+        });
+        console.log('Nathan2');
+        // the request it made
+        req = httpMock.expectOne('../nifi-registry-api/access/oidc/exchange');
+        expect(req.request.method).toEqual('POST');
+        console.log(req.request);
+        console.log('Nathan3');
+        // Next, fulfill the request by transmitting a response.
+        req.flush('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiYmVuZGVATklGSS5BUEFDSEUuT1JHIiwiaXNzIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwiYXVkIjoiS2VyYmVyb3NTcG5lZ29JZGVudGl0eVByb3ZpZGVyIiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYmJlbmRlQE5JRkkuQVBBQ0hFLk9SRyIsImtpZCI6IjQ3NWQwZWEyLTkzZGItNDhiNi05MjcxLTgyOGM3MzQ5ZTFkNiIsImlhdCI6MTUxMjQ4NTY4NywiZXhwIjoxNTEyNTI4ODg3fQ.lkaWPQw1ld7Qqb6-Zu8mAqu6r8mUVHBNP0ZfNpES3rA');
+        console.log('Nathan4');
+        // Finally, assert that there are no outstanding requests.
+        httpMock.verify();
+        console.log('Nathan5');
+    }));
+
+    // ---- End Nathan
+
     it('should GET to load the current user.', inject([HttpTestingController], function (httpMock) {
         // api call
         nfRegistryApi.loadCurrentUser().subscribe(function (response) {
