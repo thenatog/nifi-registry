@@ -71,11 +71,6 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
     private AnonymousIdentityFilter anonymousAuthenticationFilter = new AnonymousIdentityFilter();
 
     @Autowired
-    private OidcIdentityProvider oidcIdentityProvider;
-    private IdentityFilter oidcAuthenticationFilter;
-    private IdentityAuthenticationProvider oidcAuthenticationProvider;
-
-    @Autowired
     private X509IdentityProvider x509IdentityProvider;
     private IdentityFilter x509AuthenticationFilter;
     private IdentityAuthenticationProvider x509AuthenticationProvider;
@@ -103,7 +98,7 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
         http
                 .rememberMe().disable()
                 .authorizeRequests()
-                    .anyRequest().fullyAuthenticated()
+                    .anyRequest().fullyAuthenticated() // requests must be authenticated
                     .and()
                 .exceptionHandling()
                     .authenticationEntryPoint(http401AuthenticationEntryPoint())
@@ -117,14 +112,12 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
         http.headers().httpStrictTransportSecurity().maxAgeInSeconds(31540000);
         http.headers().frameOptions().sameOrigin();
 
+        //request can be authenticated using these two mechanisms
         // x509
         http.addFilterBefore(x509AuthenticationFilter(), AnonymousAuthenticationFilter.class);
 
         // jwt
         http.addFilterBefore(jwtAuthenticationFilter(), AnonymousAuthenticationFilter.class);
-
-        // oidc
-        http.addFilterBefore(oidcAuthenticationFilter(), AnonymousAuthenticationFilter.class);
 
         // otp
         // todo, if needed one-time password auth filter goes here
@@ -137,14 +130,12 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
         // but before the Jersey application endpoints get the request,
         // insert the ResourceAuthorizationFilter to do its authorization checks
         http.addFilterAfter(resourceAuthorizationFilter(), FilterSecurityInterceptor.class);
-
     }
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         // does the order matter here?
         auth
-                .authenticationProvider(oidcAuthenticationProvider())
                 .authenticationProvider(x509AuthenticationProvider())
                 .authenticationProvider(jwtAuthenticationProvider());
     }
@@ -175,20 +166,6 @@ public class NiFiRegistrySecurityConfig extends WebSecurityConfigurerAdapter {
             jwtAuthenticationProvider = new IdentityAuthenticationProvider(properties, authorizer, jwtIdentityProvider);
         }
         return jwtAuthenticationProvider;
-    }
-
-    private IdentityFilter oidcAuthenticationFilter() throws Exception {
-        if (oidcAuthenticationFilter == null) {
-            oidcAuthenticationFilter = new IdentityFilter(oidcIdentityProvider);
-        }
-        return oidcAuthenticationFilter;
-    }
-
-    private IdentityAuthenticationProvider oidcAuthenticationProvider() {
-        if (oidcAuthenticationProvider == null) {
-            oidcAuthenticationProvider = new IdentityAuthenticationProvider(properties, authorizer, oidcIdentityProvider);
-        }
-        return oidcAuthenticationProvider;
     }
 
     private ResourceAuthorizationFilter resourceAuthorizationFilter() {

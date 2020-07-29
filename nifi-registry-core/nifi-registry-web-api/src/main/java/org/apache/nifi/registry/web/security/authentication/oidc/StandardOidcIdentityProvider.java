@@ -85,7 +85,7 @@ import javax.servlet.http.HttpServletRequest;
  * OidcProvider for managing the OpenId Connect Authorization flow.
  */
 @Component
-public class StandardOidcIdentityProvider implements OidcIdentityProvider, IdentityProvider {
+public class StandardOidcIdentityProvider implements OidcIdentityProvider {
 
     private static final Logger logger = LoggerFactory.getLogger(StandardOidcIdentityProvider.class);
     private final String EMAIL_CLAIM = "email";
@@ -474,58 +474,4 @@ public class StandardOidcIdentityProvider implements OidcIdentityProvider, Ident
         }
     }
 
-    @Override
-    public IdentityProviderUsage getUsageInstructions() {
-        return usage;
-    }
-
-    @Override
-    public AuthenticationRequest extractCredentials(HttpServletRequest servletRequest) {
-        // only support OIDC login when running securely
-        if (!servletRequest.isSecure() || !isOidcEnabled()) {
-            return null;
-        }
-
-        return null;
-        //return new AuthenticationRequest(null, kerberosTicket, authenticationDetailsSource.buildDetails(request));
-    }
-
-    @Override
-    public AuthenticationResponse authenticate(AuthenticationRequest authenticationRequest) throws InvalidCredentialsException, IdentityAccessException {
-        if (authenticationRequest == null || authenticationRequest.getUsername() == null) {
-            return null;
-        }
-
-        String principal = authenticationRequest.getUsername();
-
-        return new AuthenticationResponse(principal, principal, 10000, "oidc-prov");
-    }
-
-    @Override
-    public boolean supports(Class<? extends AuthenticationRequest> authenticationRequestClazz) {
-        return false;
-    }
-
-    @Override
-    public void onConfigured(IdentityProviderConfigurationContext configurationContext) throws SecurityProviderCreationException {
-        throw new SecurityProviderCreationException(StandardOidcIdentityProvider.class.getSimpleName() +
-                " does not currently support being loaded via IdentityProviderFactory");
-    }
-
-    @Override
-    public void preDestruction() throws SecurityProviderDestructionException {
-
-    }
-
-    private static final IdentityProviderUsage usage = new IdentityProviderUsage() {
-        @Override
-        public String getText() {
-            return "Configure an OIDC provider such as Google Suite.";
-        }
-
-        @Override
-        public AuthType getAuthType() {
-            return AuthType.OAUTH;
-        }
-    };
 }

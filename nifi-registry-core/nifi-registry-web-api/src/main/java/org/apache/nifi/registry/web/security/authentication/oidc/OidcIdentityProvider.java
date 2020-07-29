@@ -24,7 +24,7 @@ import org.apache.nifi.registry.security.authentication.IdentityProvider;
 import java.io.IOException;
 import java.net.URI;
 
-public interface OidcIdentityProvider extends IdentityProvider {
+public interface OidcIdentityProvider {
 
     String OPEN_ID_CONNECT_SUPPORT_IS_NOT_CONFIGURED = "OpenId Connect support is not configured";
 
