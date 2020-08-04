@@ -18,11 +18,12 @@
 import NfStorage from 'services/nf-storage.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FdsDialogService } from '@nifi-fds/core';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 var MILLIS_PER_SECOND = 1000;
 var headers = new Headers({'Content-Type': 'application/json'});
+var jwt$ = new Subject();
 
 var config = {
     urls: {
@@ -755,95 +756,43 @@ NfRegistryApi.prototype = {
         );
     },
 
-    oidcTicketExchange: function () {
+    /**
+     * Kerberos and OIDC ticket exchange.
+     *
+     * @returns {*}
+     */
+    ticketExchange: function () {
         var self = this;
-        return this.http.post(config.urls.oidc, null, {responseType: 'text', withCredentials: 'true'}).pipe(
-            map(function (jwt) {
-                console.log('Nathan3.1');
+        if (this.nfStorage.hasItem('jwt')) {
+            return of(self.nfStorage.getItem('jwt'));
+        }
+
+        self.http.post(config.urls.kerberos, null, {responseType: 'text', withCredentials: 'true'}).subscribe(function (jwt) {
+            // get the payload and store the token with the appropriate expiration
+            var token = self.nfStorage.getJwtPayload(jwt);
+            if (token) {
+                var expiration = parseInt(token['exp'], 10) * MILLIS_PER_SECOND;
+                self.nfStorage.setItem('jwt', jwt, expiration);
+            }
+
+            jwt$.next(jwt);
+        }, function (error) {
+            self.http.post(config.urls.oidc, null, {responseType: 'text', withCredentials: 'true'}).subscribe(function (jwt) {
                 // get the payload and store the token with the appropriate expiration
-                console.log(jwt);
                 var token = self.nfStorage.getJwtPayload(jwt);
-                console.log('Nathan3.2');
                 if (token) {
-                    console.log('Nathan3.3');
                     var expiration = parseInt(token['exp'], 10) * MILLIS_PER_SECOND;
                     self.nfStorage.setItem('jwt', jwt, expiration);
-                    console.log('Nathan3.4');
                 }
-                console.log('Nathan3.5');
-                return jwt;
-            }),
-            catchError(function (err) {
-                console.log('Nathan3.6');
-                console.log('Error in retrieveJWT: ' + err);
-                return of('');
-            })
-        );
+
+                jwt$.next(jwt);
+            }, function (error) {
+                jwt$.next('');
+            });
+        });
+
+        return jwt$.asObservable();
     },
-
-    // /**
-    //  * Kerberos ticket exchange.
-    //  *
-    //  * @returns {*}
-    //  */
-    // ticketExchange: function () {
-    //     var self = this;
-    //     if (this.nfStorage.hasItem('jwt')) {
-    //         return of(self.nfStorage.getItem('jwt'));
-    //     }
-    //     return this.http.post(config.urls.kerberos, null, {responseType: 'text'}).pipe(
-    //         map(function (jwt) {
-    //             // get the payload and store the token with the appropriate expiration
-    //             var token = self.nfStorage.getJwtPayload(jwt);
-    //             if (token) {
-    //                 var expiration = parseInt(token['exp'], 10) * MILLIS_PER_SECOND;
-    //                 self.nfStorage.setItem('jwt', jwt, expiration);
-    //             }
-    //             return jwt;
-    //         }),
-    //         catchError(function (error) {
-    //             return of('');
-    //         })
-    //     );
-    // },
-
-    // ticketExchange: function () {
-    //     var self = this;
-    //     if (this.nfStorage.hasItem('jwt')) {
-    //         return of(self.nfStorage.getItem('jwt'));
-    //     }
-    //
-    //     from([config.urls.kerberos, config.urls.oidc]).pipe(concatMap(url => this.retrieveJwt(url))).subscribe(
-    //         function (jwt) {
-    //             console.log('JWT was: ' + jwt);
-    //             return of(jwt);
-    //         },
-    //         function (err) {
-    //             console.log('Error!');
-    //             //return of('');
-    //         },
-    //         function () {
-    //             console.log('Completed');
-    //         }
-    //     );
-    // },
-
-    // oidcTicketExchange: function () {
-    //     return this.http.post(config.urls.oidc, null, {responseType: 'text'}).pipe(
-    //         map(function (jwt) {
-    //             // get the payload and store the token with the appropriate expiration
-    //             var token = self.nfStorage.getJwtPayload(jwt);
-    //             if (token) {
-    //                 var expiration = parseInt(token['exp'], 10) * MILLIS_PER_SECOND;
-    //                 self.nfStorage.setItem('jwt', jwt, expiration);
-    //             }
-    //             return jwt;
-    //         }),
-    //         catchError(function (error) {
-    //             return of('');
-    //         })
-    //     );
-    // },
 
     /**
      * Loads the current user and updates the current user locally.
