@@ -23,6 +23,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
@@ -40,16 +41,16 @@ public class LoginFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
         final boolean supportsOidc = Boolean.parseBoolean(servletContext.getInitParameter("oidc-supported"));
-        final boolean supportsKnoxSso = Boolean.parseBoolean(servletContext.getInitParameter("knox-supported"));
 
         if (supportsOidc) {
             final ServletContext apiContext = servletContext.getContext("/nifi-registry-api");
             apiContext.getRequestDispatcher("/access/oidc/request").forward(request, response);
-        } else if (supportsKnoxSso) {
-            final ServletContext apiContext = servletContext.getContext("/nifi-registry-api");
-            apiContext.getRequestDispatcher("/access/knox/request").forward(request, response);
+
         } else {
-            filterChain.doFilter(request, response);
+            // Forward the client to the default login page for basic credential login
+            final HttpServletResponse httpResponse = (HttpServletResponse) response;
+            httpResponse.sendRedirect("/nifi-registry/#/login");
+
         }
     }
 

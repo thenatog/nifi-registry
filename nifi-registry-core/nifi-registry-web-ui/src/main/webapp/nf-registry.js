@@ -93,7 +93,7 @@ NfRegistry.prototype = {
      * Navigate to login route.
      */
     login: function () {
-        this.router.navigateByUrl('login');
+        window.location.href = location.origin + '/nifi-registry/login';
     }
 };
 

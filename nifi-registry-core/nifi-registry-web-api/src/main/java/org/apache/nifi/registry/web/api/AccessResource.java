@@ -147,7 +147,7 @@ public class AccessResource extends ApplicationResource {
         }
 
         final CurrentUser currentUser = serviceFacade.getCurrentUser();
-        currentUser.setLoginSupported(httpServletRequest.isSecure() && identityProvider != null);
+        currentUser.setLoginSupported(isLoginSupported(httpServletRequest));
 
         return generateOkResponse(currentUser).build();
     }
@@ -820,5 +820,10 @@ public class AccessResource extends ApplicationResource {
         }
 
         return identityProviderWaterfall;
+    }
+
+    private boolean isLoginSupported(HttpServletRequest request) {
+        boolean oidcLoginIsSupported = oidcService != null && oidcService.isOidcEnabled();
+        return (request.isSecure() && (identityProvider != null || oidcLoginIsSupported));
     }
 }
