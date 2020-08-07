@@ -19,7 +19,6 @@ package org.apache.nifi.registry.web.security.authentication.oidc;
 import com.nimbusds.oauth2.sdk.AuthorizationGrant;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import org.apache.nifi.registry.security.authentication.IdentityProvider;
 
 import java.io.IOException;
 import java.net.URI;

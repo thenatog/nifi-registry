@@ -28,18 +28,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.registry.properties.NiFiRegistryProperties;
-import org.apache.nifi.registry.security.authentication.AuthenticationRequest;
-import org.apache.nifi.registry.security.authentication.AuthenticationResponse;
-import org.apache.nifi.registry.security.authentication.IdentityProvider;
-import org.apache.nifi.registry.security.authentication.IdentityProviderConfigurationContext;
-import org.apache.nifi.registry.security.authentication.IdentityProviderUsage;
 import org.apache.nifi.registry.security.authentication.exception.IdentityAccessException;
-import org.apache.nifi.registry.security.authentication.exception.InvalidCredentialsException;
-import org.apache.nifi.registry.security.exception.SecurityProviderCreationException;
-import org.apache.nifi.registry.security.exception.SecurityProviderDestructionException;
 import org.apache.nifi.registry.util.FormatUtils;
 import org.apache.nifi.registry.web.security.authentication.jwt.JwtService;
-import org.apache.nifi.registry.web.security.authentication.x509.X509IdentityProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,8 +69,6 @@ import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import com.nimbusds.openid.connect.sdk.validators.IDTokenValidator;
 import net.minidev.json.JSONObject;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * OidcProvider for managing the OpenId Connect Authorization flow.

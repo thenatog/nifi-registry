@@ -24,7 +24,6 @@ import org.apache.nifi.registry.web.security.authentication.AnonymousIdentityFil
 import org.apache.nifi.registry.web.security.authentication.IdentityAuthenticationProvider;
 import org.apache.nifi.registry.web.security.authentication.IdentityFilter;
 import org.apache.nifi.registry.web.security.authentication.jwt.JwtIdentityProvider;
-import org.apache.nifi.registry.web.security.authentication.oidc.OidcIdentityProvider;
 import org.apache.nifi.registry.web.security.authentication.x509.X509IdentityAuthenticationProvider;
 import org.apache.nifi.registry.web.security.authentication.x509.X509IdentityProvider;
 import org.apache.nifi.registry.web.security.authorization.ResourceAuthorizationFilter;
