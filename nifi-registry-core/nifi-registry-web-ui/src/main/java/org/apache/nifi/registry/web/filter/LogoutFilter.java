@@ -41,14 +41,10 @@ public class LogoutFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
         final boolean supportsOidc = Boolean.parseBoolean(servletContext.getInitParameter("oidc-supported"));
-        final boolean supportsKnoxSso = Boolean.parseBoolean(servletContext.getInitParameter("knox-supported"));
 
         if (supportsOidc) {
             final ServletContext apiContext = servletContext.getContext("/nifi-api");
             apiContext.getRequestDispatcher("/access/oidc/logout").forward(request, response);
-        } else if (supportsKnoxSso) {
-            final ServletContext apiContext = servletContext.getContext("/nifi-api");
-            apiContext.getRequestDispatcher("/access/knox/logout").forward(request, response);
         } else {
             ((HttpServletResponse) response).sendRedirect("login");
         }

@@ -18,12 +18,11 @@
 import NfStorage from 'services/nf-storage.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FdsDialogService } from '@nifi-fds/core';
-import { of, Subject } from 'rxjs';
+import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 var MILLIS_PER_SECOND = 1000;
 var headers = new Headers({'Content-Type': 'application/json'});
-var jwt$ = new Subject();
 
 var config = {
     urls: {
@@ -766,32 +765,30 @@ NfRegistryApi.prototype = {
         if (this.nfStorage.hasItem('jwt')) {
             return of(self.nfStorage.getItem('jwt'));
         }
-
-        self.http.post(config.urls.kerberos, null, {responseType: 'text', withCredentials: 'true'}).subscribe(function (jwt) {
+        var jwtHandler = function (jwt) {
             // get the payload and store the token with the appropriate expiration
             var token = self.nfStorage.getJwtPayload(jwt);
             if (token) {
                 var expiration = parseInt(token['exp'], 10) * MILLIS_PER_SECOND;
                 self.nfStorage.setItem('jwt', jwt, expiration);
             }
-
-            jwt$.next(jwt);
-        }, function (error) {
-            self.http.post(config.urls.oidc, null, {responseType: 'text', withCredentials: 'true'}).subscribe(function (jwt) {
-                // get the payload and store the token with the appropriate expiration
-                var token = self.nfStorage.getJwtPayload(jwt);
-                if (token) {
-                    var expiration = parseInt(token['exp'], 10) * MILLIS_PER_SECOND;
-                    self.nfStorage.setItem('jwt', jwt, expiration);
-                }
-
-                jwt$.next(jwt);
-            }, function (error) {
-                jwt$.next('');
-            });
-        });
-
-        return jwt$.asObservable();
+            return jwt;
+        };
+        return this.http.post(config.urls.kerberos, null, {responseType: 'text'}).pipe(
+            map(function (jwt) {
+                return jwtHandler(jwt);
+            }),
+            catchError(function (error) {
+                return self.http.post(config.urls.oidc, null, {responseType: 'text', withCredentials: 'true'}).pipe(
+                    map(function (jwt) {
+                        return jwtHandler(jwt);
+                    }),
+                    catchError(function (error) {
+                        return of('');
+                    })
+                );
+            })
+        );
     },
 
     /**

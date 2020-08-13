@@ -705,6 +705,17 @@ public class AccessResource extends ApplicationResource {
             throw new IllegalStateException("OpenId Connect is not configured.");
         }
 
+        String userIdentity = NiFiUserUtils.getNiFiUserIdentity();
+
+        if(userIdentity != null && !userIdentity.isEmpty()) {
+            try {
+                logger.info("Logging out user " + userIdentity);
+                jwtService.logOut(userIdentity);
+            } catch (final JwtException e) {
+                logger.error("Logout of user " + userIdentity + " failed due to: " + e.getMessage());
+            }
+        }
+
         URI endSessionEndpoint = oidcService.getEndSessionEndpoint();
         String postLogoutRedirectUri = generateResourceUri("..", "nifi");
 

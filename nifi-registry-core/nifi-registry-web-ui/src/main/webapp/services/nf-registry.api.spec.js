@@ -132,6 +132,26 @@ describe('NfRegistry API w/ Angular testing utils', function () {
         httpMock.verify();
     }));
 
+    it('ticketExchange should POST to Kerberos and OIDC endpoints and fail to retrieve a JWT.', inject([HttpTestingController], function (httpMock) {
+        // Spy
+        spyOn(nfRegistryApi.nfStorage, 'setItem').and.callThrough();
+
+        // api call
+        nfRegistryApi.ticketExchange().subscribe(
+            function (response) {
+                expect(response).toBe('');
+            }
+        );
+
+        req = httpMock.expectOne(kerbUrl);
+        req.flush(null, {status: 401, statusText: 'POST exchange tickets mock error'});
+        reqAgain = httpMock.expectOne(oidcUrl);
+        reqAgain.flush(null, {status: 401, statusText: 'POST exchange tickets mock error'});
+
+        // Finally, assert that there are no outstanding requests.
+        httpMock.verify();
+    }));
+
     it('ticketExchange should POST to Kerberos to retrieve a JWT.', inject([HttpTestingController], function (httpMock) {
         // Spy
         spyOn(nfRegistryApi.nfStorage, 'setItem').and.callThrough();
